@@ -3,108 +3,29 @@ import TunnelPanel from '../tunnel/TunnelPanel.svelte';
 
 import ModelsSection from './ModelsSection.svelte';
 import ProviderPanel from './ProviderPanel.svelte';
+import { getSettingsFormStore } from './settings-form-store.svelte';
 import { getSettingsStore } from './settings-store.svelte';
 import { getSettingsUiStore } from './settings-ui-store.svelte';
 
-import type { AppSettings, ModelMappingConfig, ModelMappingProvider } from '@ungate/shared/frontend';
-
 const store = getSettingsStore();
+const formStore = getSettingsFormStore();
 const uiStore = getSettingsUiStore();
 
-let port = $state('');
-let apiKey = $state('');
-let quiet = $state(false);
-let extraInstruction = $state('');
-let models = $state<ModelMappingConfig[]>([]);
 let showAdvanced = $state(false);
 let validationError = $state<string | null>(null);
 
-function cloneModels(items: ModelMappingConfig[]): ModelMappingConfig[] {
-	return items.map((model, index) => {
-		let reasoningBudget = model.reasoningBudget;
-		let serviceTier = model.serviceTier;
-		let provider: ModelMappingProvider = 'claude';
-
-		if (model.provider === 'minimax') {
-			provider = 'minimax';
-		}
-
-		if (model.provider === 'openai') {
-			provider = 'openai';
-		}
-
-		if (
-			reasoningBudget !== 'none' &&
-			reasoningBudget !== 'low' &&
-			reasoningBudget !== 'medium' &&
-			reasoningBudget !== 'high' &&
-			reasoningBudget !== 'xhigh' &&
-			reasoningBudget !== 'max'
-		) {
-			reasoningBudget = null;
-		}
-
-		if (serviceTier !== 'default' && serviceTier !== 'priority') {
-			serviceTier = null;
-		}
-
-		return { ...model, provider, reasoningBudget, serviceTier, sortOrder: index };
-	});
-}
-
-function withSortOrder(items: ModelMappingConfig[]): ModelMappingConfig[] {
-	return items.map((model, index) => ({ ...model, sortOrder: index }));
-}
-
-function currentValues(): Partial<AppSettings> {
-	const values: Partial<AppSettings> = {
-		port: parseInt(port, 10),
-		quiet,
-		models: cloneModels(models)
-	};
-
-	values.apiKey = apiKey.trim() || null;
-	values.extraInstruction = extraInstruction.trim() || null;
-
-	return values;
-}
-
-function validateBeforeSave(): string | null {
-	const parsedPort = parseInt(port, 10);
-
-	if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
-		return 'Port must be an integer between 1 and 65535.';
-	}
-
-	for (const model of models) {
-		if (!model.id.trim()) {
-			return 'Every model must have a Model ID.';
-		}
-
-		if (!model.label.trim()) {
-			return `Model "${model.id}" must have a label.`;
-		}
-
-		if (!model.upstreamModel.trim()) {
-			return `Model "${model.id}" must have an upstream model.`;
-		}
-	}
-
-	return null;
-}
-
 function handleSaveAndRestart() {
-	validationError = validateBeforeSave();
+	validationError = formStore.validate();
 
 	if (validationError) {
 		return;
 	}
 
-	void store.saveAndRestart(currentValues());
+	void store.saveAndRestart(formStore.toSavePayload());
 }
 
 function handleSaveWithoutRestart() {
-	validationError = validateBeforeSave();
+	validationError = formStore.validate();
 
 	if (validationError) {
 		return;
@@ -114,7 +35,7 @@ function handleSaveWithoutRestart() {
 		store.completeRestart();
 	}
 
-	void store.save(currentValues());
+	void store.save(formStore.toSavePayload());
 }
 
 $effect(() => {
@@ -126,11 +47,7 @@ $effect(() => {
 		return;
 	}
 
-	port = String(store.settings.port);
-	apiKey = store.settings.apiKey ?? '';
-	quiet = store.settings.quiet;
-	extraInstruction = store.settings.extraInstruction ?? '';
-	models = cloneModels(store.settings.models);
+	formStore.syncFromAppSettings(store.settings);
 });
 
 $effect(() => {
@@ -173,14 +90,16 @@ $effect(() => {
 					<input
 						class="input text-sm"
 						type="number"
-						bind:value={port} />
+						value={formStore.port}
+						oninput={(event) => formStore.setPort(event.currentTarget.value)} />
 				</label>
 				<label class="label">
 					<span class="label-text text-xs">API Key</span>
 					<input
 						class="input text-sm"
 						type="text"
-						bind:value={apiKey}
+						value={formStore.apiKey}
+						oninput={(event) => formStore.setApiKey(event.currentTarget.value)}
 						placeholder="No key (open access)" />
 				</label>
 			</div>
@@ -204,7 +123,8 @@ $effect(() => {
 					<textarea
 						class="textarea text-sm"
 						rows={4}
-						bind:value={extraInstruction}
+						value={formStore.extraInstruction}
+						oninput={(event) => formStore.setExtraInstruction(event.currentTarget.value)}
 						placeholder="Additional system instruction appended to every request..."></textarea>
 					<div class="flex justify-end">
 						<button
@@ -224,15 +144,11 @@ $effect(() => {
 			<ProviderPanel />
 			<ModelsSection
 				selectedProvider={uiStore.selectedProvider}
-				models={models}
-				error={store.error}
 				onSave={handleSaveWithoutRestart}
 				saving={store.saving}
 				saved={store.saved}
 				restarting={store.restarting}
-				onModelsChange={(nextModels) => {
-					models = withSortOrder(nextModels);
-				}} />
+				error={store.error} />
 		</div>
 	{/if}
 </div>

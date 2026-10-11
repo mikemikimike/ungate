@@ -86,7 +86,7 @@ Fastify v5 server, spawned by the extension as a child Node.js process. CORS is 
 
 **Database (`src/database/`):**
 - SQLite via Drizzle ORM + better-sqlite3
-- Tables: `app_settings` (port, apiKey, quiet, extraInstruction), `provider_settings` (per-provider OAuth tokens, refresh tokens, expiry), `model_mappings` (id, label, provider, upstreamModel, reasoningBudget), `requests` (analytics)
+- Tables: `app_settings` (port, apiKey, quiet, extraInstruction, claudeCliVersionMode, claudeCliVersionCustom), `provider_settings` (per-provider OAuth tokens, refresh tokens, expiry), `model_mappings` (id, label, provider, upstreamModel, reasoningBudget), `requests` (analytics)
 - Migrations: `apps/api/drizzle/` — idempotent (`CREATE TABLE IF NOT EXISTS`, `INSERT OR IGNORE`). Generated with `pnpm drizzle-kit generate --name <index>` (config: `prefix: 'none'`); files are named `_0000.sql`, `_0001.sql`, …
 - Model registry: `model_mappings` is the single source of truth for model routing. Default models are seeded by migration `_0002.sql` only — there are no runtime defaults in code.
 - Databases on disk: `~/.ungate/data.db` (production default) and `~/.ungate/data-dev.db` (used when `DB_PATH=$HOME/.ungate/data-dev.db` is set in dev). Always verify which database the running API process is using before debugging analytics or auth.
@@ -151,14 +151,14 @@ Types, constants, Zod schemas, helpers.
 - `src/types/` — `settings.ts`, `runtime.ts`, `tunnel.ts`, `analytics.ts`, `log.ts`
 - `src/constants/` — `routes.ts`
 - `src/enums/` — `common.ts`
-- `src/helpers/` — `model-provider.ts`, `provider-labels.ts`, `utils.ts`
+- `src/helpers/` — `claude-cli.ts` (`ClaudeCliVersion`), `model-provider.ts`, `provider-labels.ts`, `utils.ts`
 - `src/schemas/` — `runtime.ts`
 - `src/guards/` — `settings.ts`
 - Two entry points: `index.ts` (server-side) and `frontend.ts` (browser-safe subset)
 
 ## Key mechanisms
 
-**Claude OAuth authentication:** acquires token via Anthropic OAuth PKCE flow, stores in SQLite. Refreshes token on 401. Anthropic requires exact request fingerprint: `?beta=true` URL suffix, `User-Agent: claude-cli/2.1.9`, full `x-stainless-*` headers, `anthropic-dangerous-direct-browser-access: true`, three `anthropic-beta` feature flags (oauth, claude-code, interleaved-thinking). Manual `CODE#STATE` entry required — Anthropic does not accept localhost as redirect_uri for claude.ai OAuth.
+**Claude OAuth authentication:** acquires token via Anthropic OAuth PKCE flow, stores in SQLite. Refreshes token on 401. Anthropic requires Claude Code request fingerprint: `?beta=true` URL suffix, `User-Agent` with `claude-cli/<version> (external, claude-vscode, agent-sdk/0.2.7)` (`<version>` from `claudeCliVersionMode` / `claudeCliVersionCustom` in `app_settings`, default stable `2.1.9`), full `x-stainless-*` headers, `anthropic-dangerous-direct-browser-access: true`, three `anthropic-beta` feature flags (oauth, claude-code, interleaved-thinking). Headers built in `RequestBuilder.getClaudeOAuthHeaders()`. Dashboard: Provider → Claude → Claude Code version. Manual `CODE#STATE` entry required — Anthropic does not accept localhost as redirect_uri for claude.ai OAuth.
 
 **System prompt conflict:** Claude Code's system prompt describing tools conflicts with Cursor's actual `input_schema`. The prompt must be minimal — identity only — and delegate tool shape to `input_schema`. The `extraInstruction` field in `app_settings` reinforces this priority. Full removal breaks API contract (empty blocks error), long prompts cause `invalid arguments` on large plans.
 

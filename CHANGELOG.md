@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.14 - 2026-10-11
+
+- Add Claude Code version selector for Claude models that require a newer version
+
 ## 1.7.13 - 2026-10-07
 
 - Add GPT-6 Astra with standard and priority tiers

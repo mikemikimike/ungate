@@ -7,6 +7,7 @@ import ChatGPTAuthSection from '../auth/ChatGPTAuthSection.svelte';
 import ClaudeAuthSection from '../auth/ClaudeAuthSection.svelte';
 import MiniMaxAuthSection from '../auth/MiniMaxAuthSection.svelte';
 
+import ClaudeCliVersionSection from './ClaudeCliVersionSection.svelte';
 import { getSettingsUiStore, ProviderAuthState } from './settings-ui-store.svelte';
 
 import type { ModelMappingProvider } from '@ungate/shared/frontend';
@@ -65,6 +66,7 @@ function handleAuthStatusChange(): void {
 
 	{#if uiStore.selectedProvider === 'claude'}
 		<ClaudeAuthSection onAuthStatusChange={handleAuthStatusChange} />
+		<ClaudeCliVersionSection />
 	{:else if uiStore.selectedProvider === 'openai'}
 		<ChatGPTAuthSection onAuthStatusChange={handleAuthStatusChange} />
 	{:else}

@@ -7,6 +7,10 @@ export const MODEL_MAPPING_PROVIDERS = ['claude', 'minimax', 'openai'] as const;
 export const MODEL_SERVICE_TIERS = ['default', 'priority'] as const;
 export const REASONING_BUDGET_TIERS = ['none', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 
+export const CLAUDE_CLI_VERSION_MODES = ['stable', 'latest', 'custom'] as const;
+
+export type ClaudeCliVersionMode = (typeof CLAUDE_CLI_VERSION_MODES)[number];
+
 export interface ModelMappingConfig {
 	id: string;
 	label: string;
@@ -22,5 +26,7 @@ export interface AppSettings {
 	apiKey: string | null;
 	quiet: boolean;
 	extraInstruction: string | null;
+	claudeCliVersionMode: ClaudeCliVersionMode;
+	claudeCliVersionCustom: string | null;
 	models: ModelMappingConfig[];
 }

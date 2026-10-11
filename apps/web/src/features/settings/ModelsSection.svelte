@@ -5,6 +5,8 @@ import IconTrash2 from 'virtual:icons/lucide/trash-2';
 
 import { getSavedSettingsModelId, saveSettingsModelId } from '$shared/vscode';
 
+import { getSettingsFormStore } from './settings-form-store.svelte';
+
 import type { ModelMappingConfig, ModelMappingProvider } from '@ungate/shared/frontend';
 
 interface VisibleModelItem {
@@ -14,8 +16,6 @@ interface VisibleModelItem {
 
 interface Props {
 	selectedProvider: ModelMappingProvider;
-	models: ModelMappingConfig[];
-	onModelsChange: (nextModels: ModelMappingConfig[]) => void;
 	onSave: () => void;
 	saving: boolean;
 	saved: boolean;
@@ -23,7 +23,9 @@ interface Props {
 	error: string | null;
 }
 
-let { selectedProvider, models, onModelsChange, onSave, saving, saved, restarting, error }: Props = $props();
+let { selectedProvider, onSave, saving, saved, restarting, error }: Props = $props();
+
+const formStore = getSettingsFormStore();
 
 let copiedId = $state<string | null>(null);
 let confirmDeleteModelId = $state<string | null>(null);
@@ -46,16 +48,12 @@ const serviceTierOptions: { label: string; value: ModelMappingConfig['serviceTie
 	{ label: 'Fast / Priority', value: 'priority' }
 ];
 
-function withSortOrder(items: ModelMappingConfig[]): ModelMappingConfig[] {
-	return items.map((model, index) => ({ ...model, sortOrder: index }));
-}
-
 function commit(nextModels: ModelMappingConfig[]) {
-	onModelsChange(withSortOrder(nextModels));
+	formStore.setModels(nextModels);
 }
 
 function visibleModels(): VisibleModelItem[] {
-	return models.map((model, index) => ({ model, index })).filter((item) => item.model.provider === selectedProvider);
+	return formStore.models.map((model, index) => ({ model, index })).filter((item) => item.model.provider === selectedProvider);
 }
 
 function activeVisibleModel(): VisibleModelItem | null {
@@ -108,16 +106,16 @@ function setActiveModel(index: number) {
 }
 
 function addModel() {
-	const nextIndex = models.length;
+	const nextIndex = formStore.models.length;
 
 	commit([
-		...models,
+		...formStore.models,
 		{
 			id: '',
 			label: '',
 			provider: selectedProvider,
 			upstreamModel: '',
-			sortOrder: models.length,
+			sortOrder: formStore.models.length,
 			reasoningBudget: null,
 			serviceTier: null
 		}
@@ -154,7 +152,7 @@ function updateModelAtIndex(index: number, key: keyof ModelMappingConfig, value:
 	}
 
 	commit(
-		models.map((model, modelIndex) => {
+		formStore.models.map((model, modelIndex) => {
 			if (modelIndex !== index) {
 				return model;
 			}
@@ -219,7 +217,7 @@ function confirmDelete() {
 		return;
 	}
 
-	commit(models.filter((_, modelIndex) => modelIndex !== confirmDeleteIndex));
+	commit(formStore.models.filter((_, modelIndex) => modelIndex !== confirmDeleteIndex));
 	cancelDelete();
 }
 

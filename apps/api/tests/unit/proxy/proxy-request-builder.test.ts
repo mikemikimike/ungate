@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('src/database/app-settings', () => ({
 	Settings: {
-		get: vi.fn(() => ({ extraInstruction: 'extra instruction from settings' }))
+		get: vi.fn(() => ({
+			extraInstruction: 'extra instruction from settings',
+			claudeCliVersionMode: 'latest',
+			claudeCliVersionCustom: null
+		}))
 	}
 }));
 
@@ -85,5 +89,9 @@ describe('proxy-request-builder', () => {
 		expect(Array.isArray(system)).toBe(true);
 		expect(system.some((block) => block.text === 'custom system')).toBe(true);
 		expect(system.some((block) => block.text === 'extra instruction from settings')).toBe(true);
+	});
+
+	it('builds Claude OAuth User-Agent from app settings', () => {
+		expect(RequestBuilder.getClaudeOAuthUserAgent()).toBe('claude-cli/2.1.296 (external, claude-vscode, agent-sdk/0.2.7)');
 	});
 });
