@@ -1,6 +1,13 @@
 import { z } from 'zod';
 
-import { isModelMappingProvider, isModelServiceTier, isReasoningBudgetTier, type AppSettings } from '@ungate/shared';
+import {
+	ClaudeCliVersion,
+	isClaudeCliVersionMode,
+	isModelMappingProvider,
+	isModelServiceTier,
+	isReasoningBudgetTier,
+	type AppSettings
+} from '@ungate/shared';
 
 import { Settings } from '../database/app-settings';
 import { logger } from '../utils/logger';
@@ -32,6 +39,11 @@ const SettingsUpdateSchema = z
 		apiKey: z.union([z.string(), z.null()]).optional(),
 		quiet: z.boolean().optional(),
 		extraInstruction: z.union([z.string(), z.null()]).optional(),
+		claudeCliVersionMode: z
+			.string()
+			.refine((value) => isClaudeCliVersionMode(value), { message: 'claudeCliVersionMode must be stable, latest, or custom' })
+			.optional(),
+		claudeCliVersionCustom: z.union([z.string(), z.null()]).optional(),
 		models: z.array(ModelMappingUpdateSchema).optional()
 	})
 	.strip();
@@ -46,7 +58,24 @@ function validateSettingsUpdate(payload: unknown): { ok: true; value: Partial<Ap
 		return { ok: false, error: `${issue.message}${path}` };
 	}
 
-	return { ok: true, value: result.data };
+	const value: Partial<AppSettings> = result.data;
+
+	if (value.claudeCliVersionMode === 'custom') {
+		const rawCustom = value.claudeCliVersionCustom ?? '';
+		const customError = ClaudeCliVersion.validateCustomVersion(rawCustom);
+
+		if (customError) {
+			const errorResult: { ok: false; error: string } = { ok: false, error: customError };
+
+			return errorResult;
+		}
+
+		value.claudeCliVersionCustom = rawCustom.trim();
+	}
+
+	const successResult: { ok: true; value: Partial<AppSettings> } = { ok: true, value };
+
+	return successResult;
 }
 
 const plugin: FastifyPluginCallback = (app) => {

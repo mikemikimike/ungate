@@ -86,6 +86,8 @@ describe('routes: health/settings/models/analytics', () => {
 			apiKey: 'k',
 			quiet: false,
 			extraInstruction: '',
+			claudeCliVersionMode: 'stable',
+			claudeCliVersionCustom: null,
 			models: []
 		});
 

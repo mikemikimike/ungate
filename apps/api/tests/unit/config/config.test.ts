@@ -15,6 +15,8 @@ describe('config', () => {
 			apiKey: 'abc',
 			quiet: true,
 			extraInstruction: '',
+			claudeCliVersionMode: 'stable',
+			claudeCliVersionCustom: null,
 			models: []
 		});
 
@@ -29,6 +31,8 @@ describe('config', () => {
 			apiKey: null,
 			quiet: false,
 			extraInstruction: null,
+			claudeCliVersionMode: 'stable',
+			claudeCliVersionCustom: null,
 			models: []
 		});
 
@@ -43,6 +47,8 @@ describe('config', () => {
 			apiKey: null,
 			quiet: false,
 			extraInstruction: null,
+			claudeCliVersionMode: 'stable',
+			claudeCliVersionCustom: null,
 			models: []
 		});
 

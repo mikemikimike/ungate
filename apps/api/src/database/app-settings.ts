@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
 
+import { isClaudeCliVersionMode, type AppSettings, type ClaudeCliVersionMode } from '@ungate/shared';
+
 import { ModelMappings } from './model-mappings';
 import { appSettings } from './schema';
 
 import { getDb } from './index';
-
-import type { AppSettings } from '@ungate/shared';
 
 export class Settings {
 	private static generateApiKey(): string {
@@ -26,13 +26,23 @@ export class Settings {
 				.all();
 		}
 
-		return {
+		let claudeCliVersionMode: ClaudeCliVersionMode = 'stable';
+
+		if (isClaudeCliVersionMode(row.claudeCliVersionMode)) {
+			claudeCliVersionMode = row.claudeCliVersionMode;
+		}
+
+		const settings: AppSettings = {
 			port: row.port,
 			apiKey: row.apiKey,
 			quiet: row.quiet,
 			extraInstruction: row.extraInstruction,
+			claudeCliVersionMode,
+			claudeCliVersionCustom: row.claudeCliVersionCustom,
 			models: ModelMappings.list()
 		};
+
+		return settings;
 	}
 
 	static update(settings: Partial<AppSettings>): void {
@@ -46,7 +56,9 @@ export class Settings {
 					...(settings.port !== undefined && { port: settings.port }),
 					...(settings.apiKey !== undefined && { apiKey: settings.apiKey }),
 					...(settings.quiet !== undefined && { quiet: settings.quiet }),
-					...(settings.extraInstruction !== undefined && { extraInstruction: settings.extraInstruction })
+					...(settings.extraInstruction !== undefined && { extraInstruction: settings.extraInstruction }),
+					...(settings.claudeCliVersionMode !== undefined && { claudeCliVersionMode: settings.claudeCliVersionMode }),
+					...(settings.claudeCliVersionCustom !== undefined && { claudeCliVersionCustom: settings.claudeCliVersionCustom })
 				}
 			})
 			.run();

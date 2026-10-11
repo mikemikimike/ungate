@@ -1,5 +1,6 @@
 import { platform, arch } from 'node:os';
 
+import { ClaudeCliVersion } from '@ungate/shared';
 import { logger } from 'src/utils/logger';
 
 import { config } from '../config';
@@ -63,6 +64,33 @@ export class RequestBuilder {
 			'x-stainless-runtime-version': process.version,
 			'x-stainless-timeout': '600'
 		};
+	}
+
+	static getClaudeOAuthUserAgent(): string {
+		const { claudeCliVersionMode, claudeCliVersionCustom } = Settings.get();
+		const version = ClaudeCliVersion.resolve(claudeCliVersionMode, claudeCliVersionCustom);
+
+		return ClaudeCliVersion.formatUserAgent(version);
+	}
+
+	static getClaudeOAuthHeaders(accessToken: string): Record<string, string> {
+		const headers: Record<string, string> = {
+			Accept: 'application/json',
+			Authorization: `Bearer ${accessToken}`,
+			'anthropic-beta': [
+				config.anthropic.beta.claudeCode,
+				config.anthropic.beta.oauth,
+				config.anthropic.beta.interleavedThinking
+			].join(','),
+			'anthropic-dangerous-direct-browser-access': 'true',
+			'anthropic-version': '2023-06-01',
+			'Content-Type': 'application/json',
+			'User-Agent': this.getClaudeOAuthUserAgent(),
+			'x-app': 'cli',
+			...this.getStainlessHeaders()
+		};
+
+		return headers;
 	}
 
 	private static stripCacheTtl(content: ContentBlock[] | undefined): void {

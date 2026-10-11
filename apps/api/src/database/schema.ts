@@ -7,7 +7,9 @@ export const appSettings = sqliteTable('app_settings', {
 	port: integer().notNull().default(47821),
 	apiKey: text(),
 	quiet: integer({ mode: 'boolean' }).notNull().default(false),
-	extraInstruction: text()
+	extraInstruction: text(),
+	claudeCliVersionMode: text().notNull().default('stable'),
+	claudeCliVersionCustom: text()
 });
 
 export const providerSettings = sqliteTable('provider_settings', {
