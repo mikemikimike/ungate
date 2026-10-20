@@ -71,6 +71,7 @@ function createPanel() {
 	return {
 		webview: {
 			html: '',
+			options: {} as Record<string, unknown>,
 			postMessage: vi.fn(),
 			asWebviewUri: vi.fn((value) => value),
 			onDidReceiveMessage: vi.fn()
@@ -137,6 +138,71 @@ describe('Dashboard.setPort', () => {
 		dashboard.sendInitialState({ status: 'stopped', url: null, error: null });
 
 		expect(panel.webview.postMessage).toHaveBeenCalledWith({ type: 'port', port: 4783 });
+	});
+
+	it('maps the api port into the webview when the panel opens', () => {
+		const panel = createPanel();
+		createWebviewPanelMock.mockReturnValue(panel);
+		const dashboard = new Dashboard(
+			{
+				extensionMode: 1,
+				extensionPath: '/tmp/ungate-extension'
+			} as never,
+			() => {}
+		);
+		dashboard.setPort(4783);
+
+		dashboard.show();
+
+		expect(createWebviewPanelMock).toHaveBeenCalledWith(
+			'ungate',
+			'Ungate',
+			1,
+			expect.objectContaining({
+				enableScripts: true,
+				portMapping: [{ webviewPort: 4783, extensionHostPort: 4783 }]
+			})
+		);
+	});
+
+	it('opens the panel without a port mapping while the api port is unknown', () => {
+		const panel = createPanel();
+		createWebviewPanelMock.mockReturnValue(panel);
+		const dashboard = new Dashboard(
+			{
+				extensionMode: 1,
+				extensionPath: '/tmp/ungate-extension'
+			} as never,
+			() => {}
+		);
+
+		dashboard.show();
+
+		expect(createWebviewPanelMock).toHaveBeenCalledWith('ungate', 'Ungate', 1, expect.objectContaining({ portMapping: [] }));
+	});
+
+	it('updates the port mapping of an open panel when the api port changes', () => {
+		const panel = createPanel();
+		createWebviewPanelMock.mockReturnValue(panel);
+		const dashboard = new Dashboard(
+			{
+				extensionMode: 1,
+				extensionPath: '/tmp/ungate-extension'
+			} as never,
+			() => {}
+		);
+		dashboard.setPort(4783);
+		dashboard.show();
+
+		dashboard.setPort(4790);
+
+		expect(panel.webview.options).toEqual(
+			expect.objectContaining({
+				enableScripts: true,
+				portMapping: [{ webviewPort: 4790, extensionHostPort: 4790 }]
+			})
+		);
+		expect(panel.webview.postMessage).toHaveBeenCalledWith({ type: 'port', port: 4790 });
 	});
 
 	it('reads shared api logs during initial state sync', () => {

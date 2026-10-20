@@ -40,10 +40,7 @@ export class Dashboard {
 			return;
 		}
 
-		this.panel = vscode.window.createWebviewPanel('ungate', 'Ungate', vscode.ViewColumn.One, {
-			enableScripts: true,
-			localResourceRoots: [vscode.Uri.file(this.getWebDistPath())]
-		});
+		this.panel = vscode.window.createWebviewPanel('ungate', 'Ungate', vscode.ViewColumn.One, this.getWebviewOptions());
 
 		this.panel.iconPath = vscode.Uri.file(path.join(this.context.extensionPath, 'resources', 'icon.png'));
 
@@ -80,6 +77,11 @@ export class Dashboard {
 		}
 
 		this.currentPort = port;
+
+		if (this.panel) {
+			this.panel.webview.options = this.getWebviewOptions();
+		}
+
 		this.sendPort();
 		this.rebuildHtml();
 	}
@@ -168,6 +170,19 @@ export class Dashboard {
 		}
 
 		return null;
+	}
+
+	private getWebviewOptions(): vscode.WebviewOptions {
+		// The webview runs on the user's machine, but the API listens wherever the extension host runs.
+		// Under Remote SSH, WSL or Dev Containers those are different machines, and the editor only forwards
+		// localhost ports listed in portMapping. In a local window the mapping changes nothing.
+		const portMapping = this.currentPort ? [{ webviewPort: this.currentPort, extensionHostPort: this.currentPort }] : [];
+
+		return {
+			enableScripts: true,
+			localResourceRoots: [vscode.Uri.file(this.getWebDistPath())],
+			portMapping
+		};
 	}
 
 	private getWebDistPath(): string {
